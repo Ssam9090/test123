@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { auth, googleProvider, signInWithPopup, signOut, db, onSnapshot, collection, query, where, orderBy, OperationType, handleFirestoreError, addDoc, deleteDoc, doc } from './lib/firebase';
+import { auth, googleProvider, signInWithPopup, signOut, signInAnonymously, db, onSnapshot, collection, query, where, orderBy, OperationType, handleFirestoreError, addDoc, deleteDoc, doc } from './lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { Layout, Plus, Folder, Image as ImageIcon, Download, Trash2, ChevronRight, LogOut, Wand2, Loader2, Save, X, Printer, FileDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -97,8 +97,22 @@ export default function App() {
   const handleLogin = async () => {
     try {
       await signInWithPopup(auth, googleProvider);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login failed", error);
+      if (error.code === 'auth/popup-blocked') {
+        alert("Please allow popups for this site to sign in with Google.");
+      } else {
+        alert("Google sign-in failed. You can still use the app as a guest!");
+      }
+    }
+  };
+
+  const handleGuestLogin = async () => {
+    try {
+      await signInAnonymously(auth);
+    } catch (error) {
+      console.error("Guest login failed", error);
+      alert("Guest login failed. Please try again later.");
     }
   };
 
@@ -228,13 +242,21 @@ export default function App() {
             Create magical coloring books for your kids in seconds. 
             Safe, simple, and infinitely creative.
           </p>
-          <button
-            onClick={handleLogin}
-            className="w-full py-4 bg-yellow-400 hover:bg-yellow-500 text-yellow-950 font-bold text-xl rounded-2xl shadow-lg transition-all transform hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-3"
-          >
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-6 h-6" alt="Google" />
-            Sign in with Google
-          </button>
+          <div className="space-y-4">
+            <button
+              onClick={handleLogin}
+              className="w-full py-4 bg-yellow-400 hover:bg-yellow-500 text-yellow-950 font-bold text-xl rounded-2xl shadow-lg transition-all transform hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-3"
+            >
+              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-6 h-6" alt="Google" />
+              Sign in with Google
+            </button>
+            <button
+              onClick={handleGuestLogin}
+              className="w-full py-4 bg-white border-2 border-gray-200 hover:border-yellow-400 text-gray-600 font-bold text-lg rounded-2xl transition-all flex items-center justify-center gap-2"
+            >
+              Continue as Guest
+            </button>
+          </div>
         </motion.div>
       </div>
     );
@@ -292,10 +314,20 @@ export default function App() {
 
         <div className="p-4 border-t border-gray-100">
           <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-2xl mb-4">
-            <img src={user.photoURL || ''} className="w-8 h-8 rounded-full border border-gray-200" alt="User" />
+            {user.isAnonymous ? (
+              <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                <Layout className="w-4 h-4 text-gray-400" />
+              </div>
+            ) : (
+              <img src={user.photoURL || ''} className="w-8 h-8 rounded-full border border-gray-200" alt="User" />
+            )}
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-gray-900 truncate">{user.displayName}</p>
-              <p className="text-xs text-gray-500 truncate">{user.email}</p>
+              <p className="text-sm font-bold text-gray-900 truncate">
+                {user.isAnonymous ? 'Guest Artist' : user.displayName}
+              </p>
+              <p className="text-xs text-gray-500 truncate">
+                {user.isAnonymous ? 'Temporary Account' : user.email}
+              </p>
             </div>
           </div>
           <button
