@@ -1,0 +1,47 @@
+{
+  "entities": {
+    "Project": {
+      "title": "Coloring Project",
+      "description": "A collection of generated coloring pages.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Name of the project" },
+        "userId": { "type": "string", "description": "Owner of the project" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "folderId": { "type": "string", "description": "Parent folder ID" }
+      },
+      "required": ["name", "userId", "createdAt"]
+    },
+    "Page": {
+      "title": "Coloring Page",
+      "description": "A single generated coloring page.",
+      "type": "object",
+      "properties": {
+        "projectId": { "type": "string", "description": "Parent project ID" },
+        "prompt": { "type": "string", "description": "Prompt used to generate" },
+        "imageUrl": { "type": "string", "description": "Base64 or URL of the image" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "difficulty": { "type": "string", "enum": ["simple", "medium", "detailed"] },
+        "category": { "type": "string" }
+      },
+      "required": ["projectId", "imageUrl", "createdAt"]
+    },
+    "Folder": {
+      "title": "Project Folder",
+      "description": "A folder to organize projects.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "userId", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/folders/{folderId}": { "schema": "Folder", "description": "User folders" },
+    "/projects/{projectId}": { "schema": "Project", "description": "User projects" },
+    "/projects/{projectId}/pages/{pageId}": { "schema": "Page", "description": "Pages within a project" }
+  }
+}

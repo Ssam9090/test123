@@ -1,0 +1,99 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: folders
+// Document ID: auto-generated
+// Fields:
+//   - name: string (required)
+//   - userId: string (required)
+//   - createdAt: timestamp (required)
+//
+// Collection: projects
+// Document ID: auto-generated
+// Fields:
+//   - name: string (required)
+//   - userId: string (required)
+//   - folderId: string (optional)
+//   - createdAt: timestamp (required)
+//   - updatedAt: timestamp (optional)
+//
+// Collection: projects/{projectId}/pages
+// Document ID: auto-generated
+// Fields:
+//   - projectId: string (required)
+//   - prompt: string (required)
+//   - imageUrl: string (required) - Base64 data
+//   - createdAt: timestamp (required)
+//   - difficulty: string (required) - simple, medium, detailed
+//   - category: string (required)
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+
+    function isValidFolder(data) {
+      return data.keys().hasAll(['name', 'userId', 'createdAt']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.userId == request.auth.uid;
+    }
+
+    function isValidProject(data) {
+      return data.keys().hasAll(['name', 'userId', 'createdAt']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.userId == request.auth.uid;
+    }
+
+    function isValidPage(data) {
+      return data.keys().hasAll(['projectId', 'prompt', 'imageUrl', 'createdAt', 'difficulty', 'category']) &&
+             data.projectId is string &&
+             data.prompt is string && data.prompt.size() < 500 &&
+             data.imageUrl is string && data.imageUrl.size() < 2000000 && // 2MB limit for base64
+             data.difficulty in ['simple', 'medium', 'detailed'] &&
+             data.category is string;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /folders/{folderId} {
+      allow read: if isDocOwner();
+      allow create: if isAuthenticated() && isValidFolder(request.resource.data);
+      allow update: if isDocOwner() && isValidFolder(request.resource.data);
+      allow delete: if isDocOwner();
+    }
+
+    match /projects/{projectId} {
+      allow read: if isDocOwner();
+      allow create: if isAuthenticated() && isValidProject(request.resource.data);
+      allow update: if isDocOwner() && isValidProject(request.resource.data);
+      allow delete: if isDocOwner();
+
+      match /pages/{pageId} {
+        allow read: if isAuthenticated() && get(/databases/$(database)/documents/projects/$(projectId)).data.userId == request.auth.uid;
+        allow create: if isAuthenticated() && isValidPage(request.resource.data) && get(/databases/$(database)/documents/projects/$(projectId)).data.userId == request.auth.uid;
+        allow update: if isAuthenticated() && isValidPage(request.resource.data) && get(/databases/$(database)/documents/projects/$(projectId)).data.userId == request.auth.uid;
+        allow delete: if isAuthenticated() && get(/databases/$(database)/documents/projects/$(projectId)).data.userId == request.auth.uid;
+      }
+    }
+  }
+}
