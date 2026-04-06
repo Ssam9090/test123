@@ -4,6 +4,7 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import { Layout, Plus, Folder, Image as ImageIcon, Download, Trash2, ChevronRight, LogOut, Wand2, Loader2, Save, X, Printer, FileDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { generateColoringPage } from './lib/gemini';
+import { compressImage } from './lib/imageUtils';
 import { jsPDF } from 'jspdf';
 import confetti from 'canvas-confetti';
 
@@ -112,7 +113,8 @@ export default function App() {
     try {
       const images: string[] = [];
       for (let i = 0; i < batchCount; i++) {
-        const img = await generateColoringPage(prompt, difficulty, category);
+        const rawImg = await generateColoringPage(prompt, difficulty, category);
+        const img = await compressImage(rawImg);
         images.push(img);
         setBatchProgress(((i + 1) / batchCount) * 100);
         if (batchCount === 1) setGeneratedImage(img);
@@ -150,6 +152,7 @@ export default function App() {
   const saveToProject = async (img: string) => {
     if (!user) return;
     try {
+      const compressedImg = await compressImage(img);
       let projectId = selectedProject?.id;
       if (!projectId) {
         const res = await addDoc(collection(db, 'projects'), {
@@ -163,7 +166,7 @@ export default function App() {
       await addDoc(collection(db, `projects/${projectId}/pages`), {
         projectId,
         prompt,
-        imageUrl: img,
+        imageUrl: compressedImg,
         createdAt: new Date(),
         difficulty,
         category

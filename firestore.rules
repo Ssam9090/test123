@@ -66,7 +66,7 @@ service cloud.firestore {
       return data.keys().hasAll(['projectId', 'prompt', 'imageUrl', 'createdAt', 'difficulty', 'category']) &&
              data.projectId is string &&
              data.prompt is string && data.prompt.size() < 500 &&
-             data.imageUrl is string && data.imageUrl.size() < 2000000 && // 2MB limit for base64
+             data.imageUrl is string && data.imageUrl.size() < 1000000 && // 1MB limit
              data.difficulty in ['simple', 'medium', 'detailed'] &&
              data.category is string;
     }
